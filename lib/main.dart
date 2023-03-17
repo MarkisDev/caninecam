@@ -1,10 +1,11 @@
-import 'dart:math';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart';
 
 void main() => runApp(MyApp());
 
@@ -31,6 +32,24 @@ class CameraExampleHome extends StatefulWidget {
 class _CameraExampleHomeState extends State<CameraExampleHome> {
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
+
+// Function to get the path of the fine-tuned model
+  Future<String> _getModel(String assetPath) async {
+    if (Platform.isAndroid) {
+      return 'flutter_assets/$assetPath';
+    }
+    final path = '${(await getApplicationSupportDirectory()).path}/$assetPath';
+    await Directory(dirname(path)).create(recursive: true);
+    final file = File(path);
+    if (!await file.exists()) {
+      final byteData = await rootBundle.load(assetPath);
+      await file.writeAsBytes(byteData.buffer
+          .asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+    }
+    return file.path;
+  }
+
+  void initCamera() async {}
 
   @override
   void initState() {
