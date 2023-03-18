@@ -88,6 +88,8 @@ class _CanineCamState extends State<CanineCam> {
         List<DetectedObject> objects =
             await objectDetector.processImage(frameImg);
         print("detected ${objects}");
+
+        setState(() {});
       });
     }).catchError((Object e) {
       if (e is CameraException) {
