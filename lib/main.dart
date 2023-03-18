@@ -68,13 +68,11 @@ class _CanineCamState extends State<CanineCam> {
   @override
   void initState() {
     super.initState();
-
+    initModel();
     initCamera();
   }
 
-// This function initializes the camera and starts image stream
-// We declare controller as dynamic since the controller might return null (when not initialized, async!)
-  initCamera() async {
+  initModel() async {
     final modelPath = await _getModel('assets/ml/model.tflite');
     final options = LocalObjectDetectorOptions(
         modelPath: modelPath,
@@ -83,25 +81,18 @@ class _CanineCamState extends State<CanineCam> {
         mode: DetectionMode.stream,
         confidenceThreshold: 0.7);
     objectDetector = ObjectDetector(options: options);
+  }
 
+// This function initializes the camera and starts image stream
+// We declare controller as dynamic since the controller might return null (when not initialized, async!)
+  initCamera() async {
     controller = CameraController(cameras[0], ResolutionPreset.high);
     await controller.initialize().then((_) async {
       maxZoomLevel = await controller.getMaxZoomLevel();
-
+      await startStream(controller);
       if (!mounted) {
         return;
       }
-
-      controller.startImageStream((image) async {
-        img = image;
-        InputImage frameImg = getInputImage();
-        List<DetectedObject> objects =
-            await objectDetector.processImage(frameImg);
-        double zoomLevel = await controller.getMaxZoomLevel();
-        setState(() {
-          _detectedObjects = objects;
-        });
-      });
     }).catchError((Object e) {
       if (e is CameraException) {
         switch (e.code) {
@@ -114,6 +105,23 @@ class _CanineCamState extends State<CanineCam> {
         }
       }
     });
+  }
+
+  startStream(CameraController controller) async {
+    await controller.startImageStream((image) async {
+      img = image;
+      InputImage frameImg = getInputImage();
+      List<DetectedObject> objects =
+          await objectDetector.processImage(frameImg);
+      double zoomLevel = await controller.getMaxZoomLevel();
+      setState(() {
+        _detectedObjects = objects;
+      });
+    });
+  }
+
+  stopStream(CameraController controller) async {
+    await controller.stopImageStream();
   }
 
 // This function will convert the cameraImage to an InputImage so we can use it for processing
@@ -224,12 +232,10 @@ class _CanineCamState extends State<CanineCam> {
           ),
           FloatingActionButton(
             onPressed: () async {
-              try {
-                final image = await controller.takePicture();
-                print("WORKS ${image.path}");
-              } catch (e) {
-                print(e);
-              }
+              await stopStream(controller);
+              final image = await controller.takePicture();
+              print("WORKS ${image.path}");
+              await initCamera();
             },
             child: Icon(Icons.camera),
           ),
