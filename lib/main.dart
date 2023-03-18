@@ -179,7 +179,16 @@ class _CanineCamState extends State<CanineCam> {
     if (_detectedObjects == null ||
         controller == null ||
         !controller.value.isInitialized) {
-      return Text('');
+      return Container(
+          child: Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text('Loading...'),
+          SpinKitRotatingCircle(
+            color: Colors.grey,
+            size: 30.0,
+          )
+        ]),
+      ));
     }
 
     final Size imageSize = Size(
