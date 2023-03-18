@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:caninecam/object_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -8,6 +7,7 @@ import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:toast/toast.dart';
 import 'package:touchable/touchable.dart';
 
 late List<CameraDescription> cameras;
@@ -44,7 +44,11 @@ class _CanineCamState extends State<CanineCam> {
   dynamic controller;
   dynamic objectDetector;
   dynamic _detectedObjects;
+  double? maxZoomLevel;
   CameraImage? img;
+  String text = "test";
+  bool isPaused = false;
+  List<Widget> stackChildren = [];
 
 // Function to get the path of the fine-tuned model
   Future<String> _getModel(String assetPath) async {
@@ -65,6 +69,7 @@ class _CanineCamState extends State<CanineCam> {
   @override
   void initState() {
     super.initState();
+
     initCamera();
   }
 
@@ -80,17 +85,20 @@ class _CanineCamState extends State<CanineCam> {
     objectDetector = ObjectDetector(options: options);
 
     controller = CameraController(cameras[0], ResolutionPreset.high);
-    await controller.initialize().then((_) {
+    await controller.initialize().then((_) async {
+      maxZoomLevel = await controller.getMaxZoomLevel();
+
       if (!mounted) {
         return;
       }
+
       controller.startImageStream((image) async {
         img = image;
 
         InputImage frameImg = getInputImage();
         List<DetectedObject> objects =
             await objectDetector.processImage(frameImg);
-
+        double zoomLevel = await controller.getMaxZoomLevel();
         setState(() {
           _detectedObjects = objects;
         });
@@ -156,8 +164,10 @@ class _CanineCamState extends State<CanineCam> {
       controller.value.previewSize!.width,
     );
     return CanvasTouchDetector(
+      gesturesToOverride: [GestureType.onTapDown],
       builder: (context) => CustomPaint(
-        painter: ObjectPainter(context, imageSize, _detectedObjects),
+        painter: ObjectPainter(
+            context, controller, maxZoomLevel!, imageSize, _detectedObjects),
       ),
     );
   }
@@ -171,9 +181,10 @@ class _CanineCamState extends State<CanineCam> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> stackChildren = [];
     Size size = MediaQuery.of(context).size;
+    ToastContext().init(context);
     if (controller != null) {
+      // stackChildren.add(Positioned(top: 0.0, left: 0.0, child: Text(text)));
       stackChildren.add(
         Positioned(
           top: 0.0,
@@ -190,17 +201,56 @@ class _CanineCamState extends State<CanineCam> {
           ),
         ),
       );
-
-      stackChildren.add(
-        Positioned(
-            top: 0.0,
-            left: 0.0,
-            width: size.width,
-            height: size.height,
-            child: drawRectangleOverObjects()),
-      );
+      if (isPaused == false) {
+        stackChildren.add(
+          Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: drawRectangleOverObjects()),
+        );
+      }
     }
     return Scaffold(
+        floatingActionButton:
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          FloatingActionButton(
+            onPressed: () async {
+              controller.setZoomLevel(await controller.getMinZoomLevel());
+              Toast.show("Zoom reset!",
+                  duration: Toast.lengthShort, gravity: Toast.bottom);
+            },
+            child: Icon(Icons.zoom_out),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: FloatingActionButton(
+              onPressed: () async {
+                if (isPaused == true) {
+                  setState(() {
+                    isPaused = false;
+                  });
+                  Toast.show("Camera preview resumed!",
+                      duration: Toast.lengthShort, gravity: Toast.bottom);
+                  await controller.resumePreview();
+                } else {
+                  stackChildren.removeRange(0, stackChildren.length);
+                  setState(() {
+                    isPaused = true;
+                    stackChildren = stackChildren;
+                  });
+                  Toast.show("Camera preview paused!",
+                      duration: Toast.lengthShort, gravity: Toast.bottom);
+                  await controller.pausePreview().then((_) {});
+                }
+              },
+              child: (isPaused == false)
+                  ? Icon(Icons.pause)
+                  : Icon(Icons.play_arrow),
+            ),
+          )
+        ]),
         appBar: AppBar(
           title: const Text('CanineCam'),
           centerTitle: true,
@@ -226,11 +276,14 @@ class _CanineCamState extends State<CanineCam> {
 }
 
 class ObjectPainter extends CustomPainter {
-  ObjectPainter(this.context, this.imgSize, this.objects);
+  ObjectPainter(this.context, this.controller, this.maxZoomLevel, this.imgSize,
+      this.objects);
 
   final BuildContext context;
   final Size imgSize;
   final List<DetectedObject> objects;
+  final double maxZoomLevel;
+  CameraController controller;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -242,7 +295,7 @@ class ObjectPainter extends CustomPainter {
 
     final Paint paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
+      ..strokeWidth = 10.0
       ..color = Color.fromARGB(255, 255, 0, 0);
 
     for (DetectedObject detectedObject in objects) {
@@ -254,6 +307,26 @@ class ObjectPainter extends CustomPainter {
           detectedObject.boundingBox.bottom * scaleY,
         ),
         paint,
+        onTapDown: (tapDetail) {
+          final double zoomScaleX =
+              size.width / detectedObject.boundingBox.width;
+          final double zoomScaleY =
+              size.height / detectedObject.boundingBox.height;
+          // controller.setFocusPoint(detectedObject.boundingBox.center);
+          double zoomLevel = maxZoomLevel;
+          if (zoomScaleX > zoomScaleY) {
+            if (zoomScaleX < maxZoomLevel) {
+              zoomLevel = zoomScaleX;
+            }
+          } else {
+            if (zoomScaleY < maxZoomLevel) {
+              zoomLevel = zoomScaleY;
+            }
+          }
+          controller.setZoomLevel(zoomLevel);
+          Toast.show("Zooming!",
+              duration: Toast.lengthShort, gravity: Toast.bottom);
+        },
       );
     }
   }
