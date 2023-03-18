@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 late List<CameraDescription> cameras;
 
@@ -38,7 +39,7 @@ class CanineCam extends StatefulWidget {
 }
 
 class _CanineCamState extends State<CanineCam> {
-  late CameraController controller;
+  dynamic controller;
 
 // Function to get the path of the fine-tuned model
   Future<String> _getModel(String assetPath) async {
@@ -59,8 +60,20 @@ class _CanineCamState extends State<CanineCam> {
   @override
   void initState() {
     super.initState();
-    controller = CameraController(cameras[0], ResolutionPreset.max);
-    controller.initialize().then((_) {
+    initCamera();
+  }
+
+  initCamera() async {
+    final modelPath = await _getModel('assets/ml/model.tflite');
+    final options = LocalObjectDetectorOptions(
+        modelPath: modelPath,
+        classifyObjects: true,
+        multipleObjects: true,
+        mode: DetectionMode.stream);
+    ObjectDetector objectDetector = ObjectDetector(options: options);
+
+    controller = CameraController(cameras[0], ResolutionPreset.high);
+    await controller.initialize().then((_) {
       if (!mounted) {
         return;
       }
@@ -87,11 +100,22 @@ class _CanineCamState extends State<CanineCam> {
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.value.isInitialized) {
-      return Container();
-    }
-    return MaterialApp(
-      home: CameraPreview(controller),
-    );
+    return Scaffold(
+        appBar: AppBar(
+          title: const Text('CanineCam'),
+          centerTitle: true,
+        ),
+        body: (controller == null)
+            ? Container(
+                child: Center(
+                child: Column(children: [
+                  Text('Loading...'),
+                  SpinKitRotatingCircle(
+                    color: Colors.grey,
+                    size: 30.0,
+                  )
+                ]),
+              ))
+            : CameraPreview(controller));
   }
 }
