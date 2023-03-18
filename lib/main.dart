@@ -3,13 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
-import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:toast/toast.dart';
 import 'package:touchable/touchable.dart';
 import 'package:gallery_saver/gallery_saver.dart';
+import 'package:oktoast/oktoast.dart';
 
 late List<CameraDescription> cameras;
 
@@ -22,12 +22,15 @@ void main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Object Detection',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    return OKToast(
+      textPadding: EdgeInsets.all(10.0),
+      child: MaterialApp(
+        title: 'Object Detection',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: CanineCam(),
       ),
-      home: CanineCam(),
     );
   }
 }
@@ -202,7 +205,7 @@ class _CanineCamState extends State<CanineCam> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    ToastContext().init(context);
+    // ToastContext().init(context);
     if (controller != null) {
       // stackChildren.add(Positioned(top: 0.0, left: 0.0, child: Text(text)));
       stackChildren.add(
@@ -238,8 +241,9 @@ class _CanineCamState extends State<CanineCam> {
           FloatingActionButton(
             onPressed: () async {
               controller.setZoomLevel(await controller.getMinZoomLevel());
-              Toast.show("Zoom reset!",
-                  duration: Toast.lengthShort, gravity: Toast.bottom);
+              // Toast.show("Zoom reset!",
+              //     duration: Toast.lengthShort, gravity: Toast.bottom);
+              showToast('Zoom Reset!');
             },
             child: Icon(Icons.zoom_out),
           ),
@@ -259,18 +263,21 @@ class _CanineCamState extends State<CanineCam> {
                   await image.saveTo('${filePath.path}/$fileName');
                   GallerySaver.saveImage(image.path).then((success) {
                     if (success = true) {
-                      Toast.show("Picture captured and saved!",
-                          duration: Toast.lengthShort, gravity: Toast.bottom);
+                      // Toast.show("Picture captured and saved!",
+                      //     duration: Toast.lengthShort, gravity: Toast.bottom);
+                      showToast('Picture captured and saved!');
                     } else {
-                      Toast.show("Picture couldn't be captured!",
-                          duration: Toast.lengthShort, gravity: Toast.bottom);
+                      // Toast.show("Picture couldn't be captured!",
+                      //     duration: Toast.lengthShort, gravity: Toast.bottom);
+                      showToast('Picture couldn\'t be saved!');
                     }
                   });
                   await startStream();
                 }
               } else {
-                Toast.show("Camera is loading!",
-                    duration: Toast.lengthShort, gravity: Toast.bottom);
+                // Toast.show("Camera is loading!",
+                //     duration: Toast.lengthShort, gravity: Toast.bottom);
+                showToast('Camera is loading!');
               }
             },
             child: Icon(Icons.camera),
@@ -281,8 +288,10 @@ class _CanineCamState extends State<CanineCam> {
                 setState(() {
                   isPaused = false;
                 });
-                Toast.show("Camera preview resumed!",
-                    duration: Toast.lengthShort, gravity: Toast.bottom);
+                // Toast.show("Camera preview resumed!",
+                //     duration: Toast.lengthShort, gravity: Toast.bottom);
+                showToast('Camera preview resumed!');
+
                 await controller.resumePreview();
               } else {
                 stackChildren.removeRange(0, stackChildren.length);
@@ -290,8 +299,10 @@ class _CanineCamState extends State<CanineCam> {
                   isPaused = true;
                   stackChildren = stackChildren;
                 });
-                Toast.show("Camera preview paused!",
-                    duration: Toast.lengthShort, gravity: Toast.bottom);
+                // Toast.show("Camera preview paused!",
+                //     duration: Toast.lengthShort, gravity: Toast.bottom);
+                showToast('Camera preview paused!');
+
                 await controller.pausePreview();
               }
             },
@@ -317,10 +328,9 @@ class _CanineCamState extends State<CanineCam> {
                       )
                     ]),
               ))
-            : Container(
-                child: Stack(
+            : Stack(
                 children: stackChildren,
-              )));
+              ));
   }
 }
 
@@ -373,8 +383,9 @@ class ObjectPainter extends CustomPainter {
             }
           }
           controller.setZoomLevel(zoomLevel);
-          Toast.show("Zooming!",
-              duration: Toast.lengthShort, gravity: Toast.bottom);
+          // Toast.show("Zooming!",
+          //     duration: Toast.lengthShort, gravity: Toast.bottom);
+          showToast('Zooming!');
         },
       );
     }
