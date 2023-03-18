@@ -9,6 +9,7 @@ import 'package:path/path.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:toast/toast.dart';
 import 'package:touchable/touchable.dart';
+import 'package:gallery_saver/gallery_saver.dart';
 
 late List<CameraDescription> cameras;
 
@@ -48,6 +49,7 @@ class _CanineCamState extends State<CanineCam> {
   CameraImage? img;
   bool isPaused = false;
   bool isBusy = false;
+  bool isStreamStopped = true;
   List<Widget> stackChildren = [];
 
 // Function to get the path of the fine-tuned model
@@ -90,7 +92,7 @@ class _CanineCamState extends State<CanineCam> {
     controller = CameraController(cameras[0], ResolutionPreset.high);
     await controller.initialize().then((_) async {
       maxZoomLevel = await controller.getMaxZoomLevel();
-      await startStream(controller);
+      await startStream();
       if (!mounted) {
         return;
       }
@@ -108,17 +110,20 @@ class _CanineCamState extends State<CanineCam> {
     });
   }
 
-  startStream(CameraController controller) async {
-    await controller.startImageStream((image) async {
-      if (!isBusy) {
-        isBusy = true;
-        img = image;
-        await performDetectionOnFrame();
-      }
-    });
+  startStream() async {
+    if (isStreamStopped == true) {
+      await controller.startImageStream((image) async {
+        if (!isBusy) {
+          isBusy = true;
+          isStreamStopped = false;
+          img = image;
+          await performDetectionOnFrame();
+        }
+      });
+    }
   }
 
-  stopStream(CameraController controller) async {
+  stopStream() async {
     await controller.stopImageStream();
   }
 
@@ -240,17 +245,32 @@ class _CanineCamState extends State<CanineCam> {
           ),
           FloatingActionButton(
             onPressed: () async {
-              await stopStream(controller);
-              final image = await controller.takePicture();
-
-              if (image != null) {
-                final fileName = basename(image.path);
-                final filePath = await getApplicationDocumentsDirectory();
-                await image.saveTo('${filePath.path}/$fileName');
-
-                Toast.show("Picture captured!",
+              // Stopping stream because can't take picture without stopping the stream!
+              if (isStreamStopped == false) {
+                await stopStream();
+                setState(() {
+                  isStreamStopped = true;
+                });
+                await controller.lockCaptureOrientation();
+                final image = await controller.takePicture();
+                if (image != null) {
+                  final fileName = basename(image.path);
+                  final filePath = await getApplicationDocumentsDirectory();
+                  await image.saveTo('${filePath.path}/$fileName');
+                  GallerySaver.saveImage(image.path).then((success) {
+                    if (success = true) {
+                      Toast.show("Picture captured and saved!",
+                          duration: Toast.lengthShort, gravity: Toast.bottom);
+                    } else {
+                      Toast.show("Picture couldn't be captured!",
+                          duration: Toast.lengthShort, gravity: Toast.bottom);
+                    }
+                  });
+                  await startStream();
+                }
+              } else {
+                Toast.show("Camera is loading!",
                     duration: Toast.lengthShort, gravity: Toast.bottom);
-                await initCamera();
               }
             },
             child: Icon(Icons.camera),
