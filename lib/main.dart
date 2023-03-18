@@ -46,7 +46,6 @@ class _CanineCamState extends State<CanineCam> {
   dynamic _detectedObjects;
   double? maxZoomLevel;
   CameraImage? img;
-  String text = "test";
   bool isPaused = false;
   List<Widget> stackChildren = [];
 
@@ -81,7 +80,8 @@ class _CanineCamState extends State<CanineCam> {
         modelPath: modelPath,
         classifyObjects: true,
         multipleObjects: true,
-        mode: DetectionMode.stream);
+        mode: DetectionMode.stream,
+        confidenceThreshold: 0.7);
     objectDetector = ObjectDetector(options: options);
 
     controller = CameraController(cameras[0], ResolutionPreset.high);
@@ -94,7 +94,6 @@ class _CanineCamState extends State<CanineCam> {
 
       controller.startImageStream((image) async {
         img = image;
-
         InputImage frameImg = getInputImage();
         List<DetectedObject> objects =
             await objectDetector.processImage(frameImg);
@@ -214,7 +213,7 @@ class _CanineCamState extends State<CanineCam> {
     }
     return Scaffold(
         floatingActionButton:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
           FloatingActionButton(
             onPressed: () async {
               controller.setZoomLevel(await controller.getMinZoomLevel());
@@ -223,32 +222,40 @@ class _CanineCamState extends State<CanineCam> {
             },
             child: Icon(Icons.zoom_out),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: FloatingActionButton(
-              onPressed: () async {
-                if (isPaused == true) {
-                  setState(() {
-                    isPaused = false;
-                  });
-                  Toast.show("Camera preview resumed!",
-                      duration: Toast.lengthShort, gravity: Toast.bottom);
-                  await controller.resumePreview();
-                } else {
-                  stackChildren.removeRange(0, stackChildren.length);
-                  setState(() {
-                    isPaused = true;
-                    stackChildren = stackChildren;
-                  });
-                  Toast.show("Camera preview paused!",
-                      duration: Toast.lengthShort, gravity: Toast.bottom);
-                  await controller.pausePreview().then((_) {});
-                }
-              },
-              child: (isPaused == false)
-                  ? Icon(Icons.pause)
-                  : Icon(Icons.play_arrow),
-            ),
+          FloatingActionButton(
+            onPressed: () async {
+              try {
+                final image = await controller.takePicture();
+                print("WORKS ${image.path}");
+              } catch (e) {
+                print(e);
+              }
+            },
+            child: Icon(Icons.camera),
+          ),
+          FloatingActionButton(
+            onPressed: () async {
+              if (isPaused == true) {
+                setState(() {
+                  isPaused = false;
+                });
+                Toast.show("Camera preview resumed!",
+                    duration: Toast.lengthShort, gravity: Toast.bottom);
+                await controller.resumePreview();
+              } else {
+                stackChildren.removeRange(0, stackChildren.length);
+                setState(() {
+                  isPaused = true;
+                  stackChildren = stackChildren;
+                });
+                Toast.show("Camera preview paused!",
+                    duration: Toast.lengthShort, gravity: Toast.bottom);
+                await controller.pausePreview();
+              }
+            },
+            child: (isPaused == false)
+                ? Icon(Icons.pause)
+                : Icon(Icons.play_arrow),
           )
         ]),
         appBar: AppBar(
