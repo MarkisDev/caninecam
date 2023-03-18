@@ -7,7 +7,13 @@ import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 
-void main() => runApp(MyApp());
+late List<CameraDescription> cameras;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  cameras = await availableCameras();
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
   @override
@@ -17,21 +23,22 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: CameraExampleHome(),
+      home: CanineCam(),
     );
   }
 }
 
-class CameraExampleHome extends StatefulWidget {
+class CanineCam extends StatefulWidget {
+  CanineCam({Key? key}) : super(key: key);
+
   @override
-  _CameraExampleHomeState createState() {
-    return _CameraExampleHomeState();
+  _CanineCamState createState() {
+    return _CanineCamState();
   }
 }
 
-class _CameraExampleHomeState extends State<CameraExampleHome> {
-  late CameraController _controller;
-  late Future<void> _initializeControllerFuture;
+class _CanineCamState extends State<CanineCam> {
+  late CameraController controller;
 
 // Function to get the path of the fine-tuned model
   Future<String> _getModel(String assetPath) async {
@@ -49,38 +56,42 @@ class _CameraExampleHomeState extends State<CameraExampleHome> {
     return file.path;
   }
 
-  void initCamera() async {}
-
   @override
   void initState() {
     super.initState();
-    availableCameras().then((cameras) {
-      _controller = CameraController(cameras[0], ResolutionPreset.medium);
-      _initializeControllerFuture = _controller.initialize();
+    controller = CameraController(cameras[0], ResolutionPreset.max);
+    controller.initialize().then((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    }).catchError((Object e) {
+      if (e is CameraException) {
+        switch (e.code) {
+          case 'CameraAccessDenied':
+            // Handle access errors here.
+            break;
+          default:
+            // Handle other errors here.
+            break;
+        }
+      }
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return CameraPreview(_controller);
-          } else {
-            return Center(child: CircularProgressIndicator());
-          }
-        },
-      ),
-      floatingActionButton:
-          FloatingActionButton(child: Icon(Icons.camera), onPressed: () {}),
+    if (!controller.value.isInitialized) {
+      return Container();
+    }
+    return MaterialApp(
+      home: CameraPreview(controller),
     );
   }
 }
