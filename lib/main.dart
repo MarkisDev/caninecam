@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:caninecam/object_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -41,6 +42,7 @@ class CanineCam extends StatefulWidget {
 class _CanineCamState extends State<CanineCam> {
   dynamic controller;
   dynamic objectDetector;
+  dynamic _detectedObjects;
   CameraImage? img;
 
 // Function to get the path of the fine-tuned model
@@ -87,9 +89,10 @@ class _CanineCamState extends State<CanineCam> {
         InputImage frameImg = getInputImage();
         List<DetectedObject> objects =
             await objectDetector.processImage(frameImg);
-        print("detected ${objects}");
 
-        setState(() {});
+        setState(() {
+          _detectedObjects = objects;
+        });
       });
     }).catchError((Object e) {
       if (e is CameraException) {
@@ -139,6 +142,24 @@ class _CanineCamState extends State<CanineCam> {
     return inputImage;
   }
 
+  //Show rectangles around detected objects
+  Widget drawRectangleOverObjecrs() {
+    if (_detectedObjects == null ||
+        controller == null ||
+        !controller.value.isInitialized) {
+      return Text('');
+    }
+
+    final Size imageSize = Size(
+      controller.value.previewSize!.height,
+      controller.value.previewSize!.width,
+    );
+    CustomPainter painter = ObjectPainter(imageSize, _detectedObjects);
+    return CustomPaint(
+      painter: painter,
+    );
+  }
+
   @override
   void dispose() {
     controller?.dispose();
@@ -148,6 +169,35 @@ class _CanineCamState extends State<CanineCam> {
 
   @override
   Widget build(BuildContext context) {
+    List<Widget> stackChildren = [];
+    Size size = MediaQuery.of(context).size;
+    if (controller != null) {
+      stackChildren.add(
+        Positioned(
+          top: 0.0,
+          left: 0.0,
+          width: size.width,
+          height: size.height,
+          child: Container(
+            child: (controller.value.isInitialized)
+                ? AspectRatio(
+                    aspectRatio: controller.value.aspectRatio,
+                    child: CameraPreview(controller),
+                  )
+                : Container(),
+          ),
+        ),
+      );
+
+      stackChildren.add(
+        Positioned(
+            top: 0.0,
+            left: 0.0,
+            width: size.width,
+            height: size.height,
+            child: drawRectangleOverObjecrs()),
+      );
+    }
     return Scaffold(
         appBar: AppBar(
           title: const Text('CanineCam'),
@@ -156,14 +206,19 @@ class _CanineCamState extends State<CanineCam> {
         body: (controller == null)
             ? Container(
                 child: Center(
-                child: Column(children: [
-                  Text('Loading...'),
-                  SpinKitRotatingCircle(
-                    color: Colors.grey,
-                    size: 30.0,
-                  )
-                ]),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Loading...'),
+                      SpinKitRotatingCircle(
+                        color: Colors.grey,
+                        size: 30.0,
+                      )
+                    ]),
               ))
-            : CameraPreview(controller));
+            : Container(
+                child: Stack(
+                children: stackChildren,
+              )));
   }
 }
