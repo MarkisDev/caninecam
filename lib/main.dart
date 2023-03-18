@@ -47,6 +47,7 @@ class _CanineCamState extends State<CanineCam> {
   double? maxZoomLevel;
   CameraImage? img;
   bool isPaused = false;
+  bool isBusy = false;
   List<Widget> stackChildren = [];
 
 // Function to get the path of the fine-tuned model
@@ -109,19 +110,26 @@ class _CanineCamState extends State<CanineCam> {
 
   startStream(CameraController controller) async {
     await controller.startImageStream((image) async {
-      img = image;
-      InputImage frameImg = getInputImage();
-      List<DetectedObject> objects =
-          await objectDetector.processImage(frameImg);
-      double zoomLevel = await controller.getMaxZoomLevel();
-      setState(() {
-        _detectedObjects = objects;
-      });
+      if (!isBusy) {
+        isBusy = true;
+        img = image;
+        await performDetectionOnFrame();
+      }
     });
   }
 
   stopStream(CameraController controller) async {
     await controller.stopImageStream();
+  }
+
+  performDetectionOnFrame() async {
+    InputImage frameImg = getInputImage();
+    List<DetectedObject> objects = await objectDetector.processImage(frameImg);
+    double zoomLevel = await controller.getMaxZoomLevel();
+    setState(() {
+      _detectedObjects = objects;
+    });
+    isBusy = false;
   }
 
 // This function will convert the cameraImage to an InputImage so we can use it for processing
@@ -234,8 +242,16 @@ class _CanineCamState extends State<CanineCam> {
             onPressed: () async {
               await stopStream(controller);
               final image = await controller.takePicture();
-              print("WORKS ${image.path}");
-              await initCamera();
+
+              if (image != null) {
+                final fileName = basename(image.path);
+                final filePath = await getApplicationDocumentsDirectory();
+                await image.saveTo('${filePath.path}/$fileName');
+
+                Toast.show("Picture captured!",
+                    duration: Toast.lengthShort, gravity: Toast.bottom);
+                await initCamera();
+              }
             },
             child: Icon(Icons.camera),
           ),
