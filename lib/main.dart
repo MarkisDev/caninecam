@@ -77,7 +77,9 @@ class _CanineCamState extends State<CanineCam> {
       if (!mounted) {
         return;
       }
-      setState(() {});
+      controller.startImageStream((image) {
+        img = image;
+      });
     }).catchError((Object e) {
       if (e is CameraException) {
         switch (e.code) {
