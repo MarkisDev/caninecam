@@ -41,6 +41,7 @@ class CanineCam extends StatefulWidget {
 class _CanineCamState extends State<CanineCam> {
   dynamic controller;
   CameraImage? img;
+
 // Function to get the path of the fine-tuned model
   Future<String> _getModel(String assetPath) async {
     if (Platform.isAndroid) {
@@ -63,6 +64,8 @@ class _CanineCamState extends State<CanineCam> {
     initCamera();
   }
 
+// This function initializes the camera and starts image stream
+// We declare controller as dynamic since the controller might return null (when not initialized, async!)
   initCamera() async {
     final modelPath = await _getModel('assets/ml/model.tflite');
     final options = LocalObjectDetectorOptions(
@@ -77,8 +80,13 @@ class _CanineCamState extends State<CanineCam> {
       if (!mounted) {
         return;
       }
-      controller.startImageStream((image) {
+      controller.startImageStream((image) async {
         img = image;
+
+        InputImage frameImg = getInputImage();
+        List<DetectedObject> objects =
+            await objectDetector.processImage(frameImg);
+        print("detected ${objects}");
       });
     }).catchError((Object e) {
       if (e is CameraException) {
@@ -94,6 +102,7 @@ class _CanineCamState extends State<CanineCam> {
     });
   }
 
+// This function will convert the cameraImage to an InputImage so we can use it for processing
   InputImage getInputImage() {
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in img!.planes) {
