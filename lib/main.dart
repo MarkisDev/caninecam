@@ -143,7 +143,7 @@ class _CanineCamState extends State<CanineCam> {
   }
 
   //Show rectangles around detected objects
-  Widget drawRectangleOverObjecrs() {
+  Widget drawRectangleOverObjects() {
     if (_detectedObjects == null ||
         controller == null ||
         !controller.value.isInitialized) {
@@ -195,7 +195,7 @@ class _CanineCamState extends State<CanineCam> {
             left: 0.0,
             width: size.width,
             height: size.height,
-            child: drawRectangleOverObjecrs()),
+            child: drawRectangleOverObjects()),
       );
     }
     return Scaffold(
