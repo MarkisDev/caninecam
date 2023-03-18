@@ -8,6 +8,7 @@ import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:touchable/touchable.dart';
 
 late List<CameraDescription> cameras;
 
@@ -154,9 +155,10 @@ class _CanineCamState extends State<CanineCam> {
       controller.value.previewSize!.height,
       controller.value.previewSize!.width,
     );
-    CustomPainter painter = ObjectPainter(imageSize, _detectedObjects);
-    return CustomPaint(
-      painter: painter,
+    return CanvasTouchDetector(
+      builder: (context) => CustomPaint(
+        painter: ObjectPainter(context, imageSize, _detectedObjects),
+      ),
     );
   }
 
@@ -220,5 +222,45 @@ class _CanineCamState extends State<CanineCam> {
                 child: Stack(
                 children: stackChildren,
               )));
+  }
+}
+
+class ObjectPainter extends CustomPainter {
+  ObjectPainter(this.context, this.imgSize, this.objects);
+
+  final BuildContext context;
+  final Size imgSize;
+  final List<DetectedObject> objects;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Using TouchyCanvas to enable interactivity
+    TouchyCanvas touchyCanvas = TouchyCanvas(context, canvas);
+    // Calculating the scale factor to resize the rectangle (newSize/originalSize)
+    final double scaleX = size.width / imgSize.width;
+    final double scaleY = size.height / imgSize.height;
+
+    final Paint paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..color = Color.fromARGB(255, 255, 0, 0);
+
+    for (DetectedObject detectedObject in objects) {
+      touchyCanvas.drawRect(
+        Rect.fromLTRB(
+          detectedObject.boundingBox.left * scaleX,
+          detectedObject.boundingBox.top * scaleY,
+          detectedObject.boundingBox.right * scaleX,
+          detectedObject.boundingBox.bottom * scaleY,
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(ObjectPainter oldDelegate) {
+    // Repaint if object is moving or new objects detected
+    return oldDelegate.imgSize != imgSize || oldDelegate.objects != objects;
   }
 }
