@@ -40,7 +40,7 @@ class CanineCam extends StatefulWidget {
 
 class _CanineCamState extends State<CanineCam> {
   dynamic controller;
-
+  CameraImage? img;
 // Function to get the path of the fine-tuned model
   Future<String> _getModel(String assetPath) async {
     if (Platform.isAndroid) {
@@ -82,14 +82,47 @@ class _CanineCamState extends State<CanineCam> {
       if (e is CameraException) {
         switch (e.code) {
           case 'CameraAccessDenied':
-            // Handle access errors here.
+            print('Camera access denied!');
             break;
           default:
-            // Handle other errors here.
+            print('Camera initalization error!');
             break;
         }
       }
     });
+  }
+
+  InputImage getInputImage() {
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in img!.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
+    final Size imageSize = Size(img!.width.toDouble(), img!.height.toDouble());
+    final camera = cameras[0];
+
+    final planeData = img!.planes.map(
+      (Plane plane) {
+        return InputImagePlaneMetadata(
+          bytesPerRow: plane.bytesPerRow,
+          height: plane.height,
+          width: plane.width,
+        );
+      },
+    ).toList();
+
+    final inputImageData = InputImageData(
+      size: imageSize,
+      imageRotation:
+          InputImageRotationValue.fromRawValue(camera.sensorOrientation)!,
+      inputImageFormat: InputImageFormatValue.fromRawValue(img!.format.raw)!,
+      planeData: planeData,
+    );
+
+    final inputImage =
+        InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
+
+    return inputImage;
   }
 
   @override
