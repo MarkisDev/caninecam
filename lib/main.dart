@@ -40,6 +40,7 @@ class CanineCam extends StatefulWidget {
 
 class _CanineCamState extends State<CanineCam> {
   dynamic controller;
+  dynamic objectDetector;
   CameraImage? img;
 
 // Function to get the path of the fine-tuned model
@@ -73,7 +74,7 @@ class _CanineCamState extends State<CanineCam> {
         classifyObjects: true,
         multipleObjects: true,
         mode: DetectionMode.stream);
-    ObjectDetector objectDetector = ObjectDetector(options: options);
+    objectDetector = ObjectDetector(options: options);
 
     controller = CameraController(cameras[0], ResolutionPreset.high);
     await controller.initialize().then((_) {
@@ -138,7 +139,8 @@ class _CanineCamState extends State<CanineCam> {
 
   @override
   void dispose() {
-    controller.dispose();
+    controller?.dispose();
+    objectDetector?.close();
     super.dispose();
   }
 
