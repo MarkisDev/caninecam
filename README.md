@@ -11,9 +11,18 @@ When you touch the rectangle, it will automatically zoom to fit the object!
 
 The application also allows you to reset zoom, take a picture (saves to your gallery) and pause/play the camera preview!
 
-# Screenshots & Video
+# Video (GIF)
 
-[objects.jpg](https://github.com/MarkisDev/intellicam/blob/main/screenshots/1.jpg?raw=true "Objects with detection")
+![video.gif](https://github.com/MarkisDev/intellicam/blob/main/screenshots/video.gif)
+
+# Screenshots 
+
+![objects.jpg](https://github.com/MarkisDev/intellicam/blob/main/screenshots/1.jpg)
+![objects.jpg](https://github.com/MarkisDev/intellicam/blob/main/screenshots/2.jpg)
+![objects.jpg](https://github.com/MarkisDev/intellicam/blob/main/screenshots/3.jpg)
+![objects.jpg](https://github.com/MarkisDev/intellicam/blob/main/screenshots/4.jpg)
+
+
 
 # Apk file?
 You can find the first pre-release [here!](https://github.com/MarkisDev/caninecam/releases/tag/release)
