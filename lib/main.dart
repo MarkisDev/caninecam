@@ -82,10 +82,10 @@ class _CanineCamState extends State<CanineCam> {
     final modelPath = await _getModel('assets/ml/model.tflite');
     final options = LocalObjectDetectorOptions(
         modelPath: modelPath,
-        classifyObjects: true,
+        classifyObjects: false,
         multipleObjects: true,
         mode: DetectionMode.stream,
-        confidenceThreshold: 0.7);
+        confidenceThreshold: 0.5);
     objectDetector = ObjectDetector(options: options);
   }
 
@@ -321,7 +321,7 @@ class _CanineCamState extends State<CanineCam> {
           )
         ]),
         appBar: AppBar(
-          title: const Text('CanineCam'),
+          title: const Text('IntelliCam'),
           centerTitle: true,
         ),
         body: (controller == null)
