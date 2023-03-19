@@ -13,6 +13,7 @@ The application also allows you to reset zoom, take a picture (saves to your gal
 
 # Screenshots & Video
 
+[objects.jpg](https://github.com/MarkisDev/intellicam/blob/main/screenshots/1.jpg?raw=true "Objects with detection")
 
 # Apk file?
 You can find the first pre-release [here!](https://github.com/MarkisDev/caninecam/releases/tag/release)
