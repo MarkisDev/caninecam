@@ -1,7 +1,7 @@
 # What is this?
 Hey! This is my implemention of an intelligent camera that can detect objects and automatically zoom to the selected object!
 
-It was built as a qualification task challenge for (https://ccextractor.org/)[https://ccextractor.org/]
+It was built as a qualification task challenge for [https://ccextractor.org/](https://ccextractor.org/)
 
 # How does this work?
 
